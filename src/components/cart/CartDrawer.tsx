@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useCart } from "./CartProvider";
 
@@ -15,6 +15,27 @@ export default function CartDrawer() {
     subtotal,
   } = useCart();
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true);
+      document.body.style.overflow = "hidden";
+    } else {
+      const timer = window.setTimeout(() => {
+        setMounted(false);
+      }, 450);
+
+      document.body.style.overflow = "";
+
+      return () => window.clearTimeout(timer);
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -24,10 +45,7 @@ export default function CartDrawer() {
       }
     };
 
-    document.addEventListener(
-      "keydown",
-      handleKeyDown
-    );
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
       document.removeEventListener(
@@ -37,22 +55,40 @@ export default function CartDrawer() {
     };
   }, [isOpen, closeCart]);
 
-  if (!isOpen) return null;
+  if (!mounted) {
+    return null;
+  }
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div
+      className={`fixed inset-0 z-[100] ${
+        isOpen
+          ? "pointer-events-auto"
+          : "pointer-events-none"
+      }`}
+      aria-hidden={!isOpen}
+    >
       {/* Overlay */}
       <button
         type="button"
         aria-label="Close shopping bag"
         onClick={closeCart}
-        className="absolute inset-0 h-full w-full bg-black/35 backdrop-blur-[2px]"
+        className={`absolute inset-0 h-full w-full bg-black/35 backdrop-blur-[3px] transition-opacity duration-500 ${
+          isOpen ? "opacity-100" : "opacity-0"
+        }`}
       />
 
       {/* Drawer */}
-      <aside className="absolute right-0 top-0 flex h-full w-full max-w-[480px] flex-col bg-[#f3efe7] text-[#171614] shadow-2xl">
+      <aside
+        className={`cart-drawer absolute right-0 top-0 flex h-full w-full max-w-[480px] flex-col bg-[#f3efe7] text-[#171614] shadow-2xl transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+          isOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping bag"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-black/10 px-6 py-6">
+        <div className="flex items-center justify-between border-b border-black/10 px-6 py-6 md:px-7">
           <div>
             <p className="mb-1 text-[9px] uppercase tracking-[0.25em] text-black/40">
               AAVYA
@@ -66,14 +102,14 @@ export default function CartDrawer() {
           <button
             type="button"
             onClick={closeCart}
-            className="text-[10px] uppercase tracking-[0.2em]"
+            className="text-[10px] uppercase tracking-[0.2em] transition-opacity hover:opacity-50"
           >
             Close
           </button>
         </div>
 
         {/* Items */}
-        <div className="flex-1 overflow-y-auto px-6">
+        <div className="flex-1 overflow-y-auto px-6 md:px-7">
           {items.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center text-center">
               <p className="font-serif text-3xl">
@@ -100,7 +136,7 @@ export default function CartDrawer() {
                   key={item.product.slug}
                   className="flex gap-5 py-6"
                 >
-                  {/* Image */}
+                  {/* Product Image */}
                   <Link
                     href={`/product/${item.product.slug}`}
                     onClick={closeCart}
@@ -109,11 +145,11 @@ export default function CartDrawer() {
                     <img
                       src={item.product.images[0]}
                       alt={item.product.name}
-                      className="h-full w-full object-cover"
+                      className="h-full w-full object-cover transition-transform duration-700 hover:scale-105"
                     />
                   </Link>
 
-                  {/* Info */}
+                  {/* Product Information */}
                   <div className="flex min-w-0 flex-1 flex-col">
                     <div className="flex justify-between gap-4">
                       <div>
@@ -144,7 +180,7 @@ export default function CartDrawer() {
                               item.product.slug
                             )
                           }
-                          className="px-3 py-2 text-sm"
+                          className="px-3 py-2 text-sm transition-colors hover:bg-black hover:text-white"
                         >
                           −
                         </button>
@@ -160,7 +196,7 @@ export default function CartDrawer() {
                               item.product.slug
                             )
                           }
-                          className="px-3 py-2 text-sm"
+                          className="px-3 py-2 text-sm transition-colors hover:bg-black hover:text-white"
                         >
                           +
                         </button>
@@ -173,7 +209,7 @@ export default function CartDrawer() {
                             item.product.slug
                           )
                         }
-                        className="text-[9px] uppercase tracking-[0.16em] text-black/40 hover:text-black"
+                        className="text-[9px] uppercase tracking-[0.16em] text-black/40 transition-colors hover:text-black"
                       >
                         Remove
                       </button>
@@ -187,7 +223,7 @@ export default function CartDrawer() {
 
         {/* Footer */}
         {items.length > 0 && (
-          <div className="border-t border-black/10 px-6 pb-7 pt-6">
+          <div className="border-t border-black/10 bg-[#f3efe7] px-6 pb-7 pt-6 md:px-7">
             <div className="mb-5 flex justify-between">
               <span className="text-[10px] uppercase tracking-[0.18em] text-black/45">
                 Subtotal
@@ -200,13 +236,15 @@ export default function CartDrawer() {
 
             <button
               type="button"
-              className="flex w-full items-center justify-between bg-[#171614] px-6 py-5 text-white transition-colors hover:bg-black/80"
+              className="group flex w-full items-center justify-between bg-[#171614] px-6 py-5 text-white transition-colors duration-500 hover:bg-black/80"
             >
               <span className="text-[10px] uppercase tracking-[0.22em]">
                 Checkout
               </span>
 
-              <span>→</span>
+              <span className="transition-transform duration-500 group-hover:translate-x-1">
+                →
+              </span>
             </button>
 
             <p className="mt-4 text-center text-[9px] leading-5 text-black/40">
